@@ -21,4 +21,6 @@ public class HttpFileCacheConfiguration
 	public ILogger Logger { get; set; } = null;
 
 	public bool UseExpiredFiles { get; set; } = true;
+
+	public string CacheFullPath { get => Path.Combine(CacheLocation, CacheDirectory); }
 }

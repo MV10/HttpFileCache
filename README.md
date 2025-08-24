@@ -10,6 +10,8 @@ Because this was created for internal use by a project I fully controlled, there
 
 The library is implemented as a simple static class. Cached files are stored with an opaque GUID filename tracked in a simple JSON index. The index is exposed as a read-only dictionary keyed on the file origin URI. Several other data elements are available such as the current size of the cache.
 
+## Configuration
+
 To start, create an `HttpFileCacheConfig` object and assign it to the `HttpFileCache.Configuration` property:
 
 ```csharp
@@ -26,6 +28,14 @@ HttpFileCache.Configuration = new
 };
 ```
 
+URI case sensitivity can be tricky. According to the standards, only the protocol (HTTP or HTTPS) and the domain name are case insensitive. In practice, most URIs are fully case insensitive, although non-Windows servers can be picky about this, and some systems intentionally use case sensitivity as part of their identifier schemes (YouTube is a major example). In the application for which HttpFileCache was designed, end-users will specify URIs in config files, and so it is safest to disable case sensitivity by default. On the other hand, if case sensitivity is enabled, the worst that will happen is you may end up with multiple copies of the file in the cache.
+
+The `Logger` property is a standard `ILogger` object as defined by _Microsoft.Extensions.Logging_ (which can be provided by other libraries such as _Serilog_).
+
+The `UseExpiredFiles` setting is explained in more detail below, but it determines whether the client application will receive a known-expired file to use while a new copy is being retrieved.
+
+## Retrieving Files
+
 File retrieval consists of sending the file URI, a unique integer identifier generated and maintaned by your application, and a callback function which receives the integer identifier and a `CachedFileData` object. If the `CachedFileData` object is null, the request failed. If an `ILogger` object was provided in configuration, the log will reflect the reason for the failure.
 
 This is an example of a file-retrieval request:
@@ -37,7 +47,7 @@ int identifier = 123;
 // blocks a thread
 HttpFileCache.RequestFile(uri, identifier, DownloadCallback);
 
-// non-blocking
+// non-blocking (if callback is an async Task, it will be awaited)
 await HttpFileCache.RequestFileAsync(uri, identifier, DownloadCallback);
 
 public void DownloadCallback(int fileID, CachedFileData fileData) 
@@ -46,5 +56,14 @@ public void DownloadCallback(int fileID, CachedFileData fileData)
 
 Download operations proceed on a background thread. When a download is completed, the downloader will invoke a callback in the client application. If a file URI is requested and the file is already in the cache, the callback will be invoked immediately. If the file is in the cache but has expired, the callback will (optionally) represent the expired version, which can be used while a replacement is retrieved. When the replacement is available, the callback will be invoked again and the consumer must immediately stop using the expired content, as it will be removed when the callback returns. Of course, if the file is not in the cache, a download is enqueued and the callback is invoked once the file is available.
 
-URI case sensitivity can be tricky. According to the standards, only the protocol (HTTP or HTTPS) and the domain name are case insensitive. In practice, most URIs are fully case insensitive, although non-Windows servers can be picky about this, and some systems intentionally use case sensitivity as part of their identifier schemes (YouTube is a major example). In the application for which HttpFileCache was designed, end-users will specify URIs in config files, and so it is safest to disable case sensitivity by default. On the other hand, if case sensitivity is enabled, the worst that will happen is you may end up with multiple copies of the file in the cache.
+## Properties
 
+TODO
+
+## Methods
+
+TODO
+
+# Command-Line Cache Management
+
+TODO
