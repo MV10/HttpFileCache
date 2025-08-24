@@ -1,5 +1,5 @@
 ﻿
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace HttpFileCache;
 
@@ -46,18 +46,8 @@ public class CachedFileData
     private int Counter = 0;
 
     /// <summary>
-    /// Returns the filename portion of the OriginURI for logging / debugging.
-    /// </summary>
-    public string GetTrueFilename()
-    {
-        var parsed = new Uri(OriginURI);
-        if (parsed.IsFile) return Path.GetFileName(parsed.AbsolutePath);
-        return null;
-    }
-
-    /// <summary>
     /// Returns the physical location of the cached file.
     /// </summary>
     public string GetCachePathname()
-        => Path.Combine(HttpFileCache.Configuration.CacheFullPath, CacheFilename);
+        => Path.Combine(FileCache.Configuration.CacheFullPath, CacheFilename);
 }

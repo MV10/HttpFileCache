@@ -12,20 +12,23 @@ The library is implemented as a simple static class. Cached files are stored wit
 
 ## Configuration
 
-To start, create an `HttpFileCacheConfig` object and assign it to the `HttpFileCache.Configuration` property:
+To start, create a `FileCacheConfiguration` object and assign it to the `FileCache.Configuration` property, then invoke the `Initialize` method:
 
 ```csharp
 // These values represent the default settings.
-HttpFileCache.Configuration = new
+FileCache.Configuration = new
 {
 	CacheLocation = null,			// use the default local temp directory
 	CacheDirectory = "http_cache",	// directory name inside CacheLocation
 	SizeLimit = 512,				// maximum cache size in megabytes
 	FileExpirationDays = 30,		// files will be refreshed after this
+	UseExpiredFiles = true,    		// temporary access to expired files
 	CaseSensitivity = false,		// false is safer if you don't need it
 	Logger = null,					// a Microsoft.Extensions.Logging logger
-	UseExpiredFiles = true,    		// temporary access to expired files
 };
+
+// Call this after setting config, but before using anything else.
+FileCache.Initialize();
 ```
 
 URI case sensitivity can be tricky. According to the standards, only the protocol (HTTP or HTTPS) and the domain name are case insensitive. In practice, most URIs are fully case insensitive, although non-Windows servers can be picky about this, and some systems intentionally use case sensitivity as part of their identifier schemes (YouTube is a major example). In the application for which HttpFileCache was designed, end-users will specify URIs in config files, and so it is safest to disable case sensitivity by default. On the other hand, if case sensitivity is enabled, the worst that will happen is you may end up with multiple copies of the file in the cache.
@@ -34,7 +37,11 @@ The `Logger` property is a standard `ILogger` object as defined by _Microsoft.Ex
 
 The `UseExpiredFiles` setting is explained in more detail below, but it determines whether the client application will receive a known-expired file to use while a new copy is being retrieved.
 
-## Retrieving Files
+## File Operations
+
+HttpFileCache has operations to request files and downloads, abort downloads, and manage the cache in general.
+
+### Requesting a File
 
 File retrieval consists of sending the file URI, a unique integer identifier generated and maintaned by your application, and a callback function which receives the integer identifier and a `CachedFileData` object. If the `CachedFileData` object is null, the request failed. If an `ILogger` object was provided in configuration, the log will reflect the reason for the failure.
 
@@ -44,32 +51,57 @@ This is an example of a file-retrieval request:
 string uri = @"https://mcguirev10.com/assets/2024/01-20/bag_dog_corrected.jpg";
 int identifier = 123;
 
-// blocks a thread
-HttpFileCache.RequestFile(uri, identifier, DownloadCallback);
+// blocks a thread during download
+FileCache.RequestFile(uri, identifier, DownloadCallback);
 
-// non-blocking (if callback is an async Task, it will be awaited)
-await HttpFileCache.RequestFileAsync(uri, identifier, DownloadCallback);
+// non-blocking download with synchronous callback
+await FileCache.RequestFileAsync(uri, identifier, callback: DownloadCallback);
 
+// non-blocking download with asynchronous callback
+await FileCache.RequestFileAsync(uri, identifier, callbackAsync: DownloadCallbackAsync);
+
+// synchronous callback (your application)
 public void DownloadCallback(int fileID, CachedFileData fileData) 
+{ ... }
+
+// awaited async callback (your application)
+public async Task DownloadCallbackAsync(int fileID, CachedFileData fileData)
 { ... }
 ```
 
+If the download operation fails or is canceled, the callback will be invoked with a null `CachedFileData` argument.
+
 Download operations proceed on a background thread. When a download is completed, the downloader will invoke a callback in the client application. If a file URI is requested and the file is already in the cache, the callback will be invoked immediately. If the file is in the cache but has expired, the callback will (optionally) represent the expired version, which can be used while a replacement is retrieved. When the replacement is available, the callback will be invoked again and the consumer must immediately stop using the expired content, as it will be removed when the callback returns. Of course, if the file is not in the cache, a download is enqueued and the callback is invoked once the file is available.
 
-## Reference Counting
+### Accessing a File
 
-To avoid deleting files which are still in use, a reference-counting feature is provided. While reference-counting can be fragile, again, this library was originally intended for internal use where strict resource management was necessary.
+To access the cached file, read the complete pathname from the `GetCachePathname()` method on the `CachedFileData` object returned to your application's callback method.
 
-TODO
+### Interrupting a Download
+
+If the application no longer needs a file that is still being downloaded, invoke the `ReleaseFile` method.
+
+### Reference Counting
+
+To avoid deleting files which are still in use, a reference-counting feature is provided. When your application no longer needs a cached file, invoke the `ReleaseFile` method.
+
+While reference-counting can be fragile, again, this library was originally intended for internal use where strict resource management was necessary.
+
+## File Removal
+
+Invoking `DeleteFile` will remove the file associated with the requested URI (if present).
+
+Invoking `ClearCache` will remove all files from the cache.
 
 ## Properties
 
-TODO
+| Property | Description |
+|---|---|
+|`Configuration`|Stores an `HttpFileCacheConfiguration` object; see instructions at the top of the README.|
+|`CacheIndex`|A read-only dictionary keyed on download URIs. It contains `CachedFileData` objects.|
+|`CacheSize`|A `long` which represents the approximate space used by the cache in megabytes.|
 
-## Methods
-
-TODO
+Because `CacheIndex` is keyed on requested URIs, and because case sensitivity can modify the URI originally requested, the `ParseUri` method is available. It will return the parsed and formatted version of the URI as HttpFileCache would use it, or it returns a null if the URI can't be parsed correctly.
 
 # Command-Line Cache Management
 
-TODO

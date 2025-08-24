@@ -1,19 +1,20 @@
 ﻿
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace HttpFileCache;
 
 /// <summary>
 /// Settings for HttpFileCache.
 /// </summary>
-public class HttpFileCacheConfiguration
+public class FileCacheConfiguration
 {
 	/// <summary>
-	/// The parent directory of the cache directory. If null, this will be
+	/// The parent directory of the cache directory. If empty, this will be
 	/// changed to the user's local temp directory the first time HttpFileCache
 	/// is referenced or used.
 	/// </summary>
-	public string CacheLocation { get; set; } = null;
+	public string CacheLocation { get; set; } = string.Empty;
 
 	/// <summary>
 	/// The name of the directory (inside CacheLocation) where the cached files
@@ -32,24 +33,25 @@ public class HttpFileCacheConfiguration
 	/// </summary>
 	public int FileExpirationDays { get; set; } = 30;
 
-	/// <summary>
-	/// When true, all requested URIs are stored as lowercase. Cached files
-	/// are indexed according to URI, so if your target server is case-sensitive,
-	/// change this to true to avoid collisions.
-	/// </summary>
-	public bool CaseSensitivity { get; set; } = false;
+    /// <summary>
+    /// When true, if an expired file is found in the cache for a requested URI,
+    /// the expired version will be returned (via callback) while a new copy is
+    /// downloaded. When the new copy is ready the callback will be invoked again.
+    /// </summary>
+    public bool UseExpiredFiles { get; set; } = true;
 
-	/// <summary>
-	/// An optional log sink.
-	/// </summary>
-	public ILogger Logger { get; set; } = null;
+    /// <summary>
+    /// When true, all requested URIs are stored as lowercase. Cached files
+    /// are indexed according to URI, so if your target server is case-sensitive,
+    /// change this to true to avoid collisions.
+    /// </summary>
+    public bool CaseSensitivity { get; set; } = false;
 
-	/// <summary>
-	/// When true, if an expired file is found in the cache for a requested URI,
-	/// the expired version will be returned (via callback) while a new copy is
-	/// downloaded. When the new copy is ready the callback will be invoked again.
-	/// </summary>
-	public bool UseExpiredFiles { get; set; } = true;
+    /// <summary>
+    /// An optional log sink.
+    /// </summary>
+    [JsonIgnore]
+    public ILogger Logger { get; set; } = null;
 
 	/// <summary>
 	/// Returns a pathname which combines CacheLocation and CacheDirectory.

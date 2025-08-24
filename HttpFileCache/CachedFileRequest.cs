@@ -22,6 +22,11 @@ public class CachedFileRequest
     public bool ReplacingExpiredFile = false;
 
     /// <summary>
+    /// The size of the file to be replaced.
+    /// </summary>
+    public long ExpiredFileSize = 0;
+
+    /// <summary>
     /// Optional blocking callback when a cached file is already
     /// present, or a requested download has been completed.
     /// </summary>

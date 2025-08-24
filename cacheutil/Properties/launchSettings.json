@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "cacheutil": {
+      "commandName": "Project",
+      "commandLineArgs": "list",
+      //"commandLineArgs": "fetch https://mcguirev10.com/assets/2024/01-20/bag_dog_corrected.jpg",
+    }
+  }
+}
