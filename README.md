@@ -56,6 +56,12 @@ public void DownloadCallback(int fileID, CachedFileData fileData)
 
 Download operations proceed on a background thread. When a download is completed, the downloader will invoke a callback in the client application. If a file URI is requested and the file is already in the cache, the callback will be invoked immediately. If the file is in the cache but has expired, the callback will (optionally) represent the expired version, which can be used while a replacement is retrieved. When the replacement is available, the callback will be invoked again and the consumer must immediately stop using the expired content, as it will be removed when the callback returns. Of course, if the file is not in the cache, a download is enqueued and the callback is invoked once the file is available.
 
+## Reference Counting
+
+To avoid deleting files which are still in use, a reference-counting feature is provided. While reference-counting can be fragile, again, this library was originally intended for internal use where strict resource management was necessary.
+
+TODO
+
 ## Properties
 
 TODO

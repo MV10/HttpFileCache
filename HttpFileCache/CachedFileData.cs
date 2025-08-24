@@ -48,7 +48,7 @@ public class CachedFileData
     /// <summary>
     /// Returns the filename portion of the OriginURI for logging / debugging.
     /// </summary>
-    public string GetFilename()
+    public string GetTrueFilename()
     {
         var parsed = new Uri(OriginURI);
         if (parsed.IsFile) return Path.GetFileName(parsed.AbsolutePath);
@@ -58,6 +58,6 @@ public class CachedFileData
     /// <summary>
     /// Returns the physical location of the cached file.
     /// </summary>
-    public string GetPathname()
+    public string GetCachePathname()
         => Path.Combine(HttpFileCache.Configuration.CacheFullPath, CacheFilename);
 }

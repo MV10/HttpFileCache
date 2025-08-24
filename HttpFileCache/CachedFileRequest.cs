@@ -6,13 +6,35 @@ namespace HttpFileCache;
 /// </summary>
 public class CachedFileRequest
 {
+    /// <summary>
+    /// Details of the cached file to be returned via callback.
+    /// </summary>
+    public CachedFileData Data;
+
+    /// <summary>
+    /// Optional identifier provided by the library consumer.
+    /// </summary>
     public int FileHandle;
 
-    public Action<int, CachedFileData> Callback;
-
-    public CancellationTokenSource CTS = new();
-
+    /// <summary>
+    /// When true, an expired file for the same URI already exists.
+    /// </summary>
     public bool ReplacingExpiredFile = false;
 
-    public CachedFileData Data;
+    /// <summary>
+    /// Optional blocking callback when a cached file is already
+    /// present, or a requested download has been completed.
+    /// </summary>
+    public Action<int, CachedFileData> Callback;
+
+    /// <summary>
+    /// Optional awaited callback when a cached file is already
+    /// present, or a requested download has been completed.
+    /// </summary>
+    public Func<int, CachedFileData, Task> CallbackAsync;
+
+    /// <summary>
+    /// DO NOT USE. Managed internally by HttpFileCache.
+    /// </summary>
+    public CancellationTokenSource CTS = new();
 }
