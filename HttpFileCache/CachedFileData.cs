@@ -37,7 +37,6 @@ public class CachedFileData
     /// <summary>
     /// If nonzero, a viz or FX is actively using this file.
     /// </summary>
-    [JsonIgnore]
     public int UsageCounter
     {
         get => Counter;

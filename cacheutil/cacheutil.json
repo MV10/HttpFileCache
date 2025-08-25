@@ -1,8 +1,10 @@
 {
   "CacheLocation": "",
   "CacheDirectory": "http_cache",
-  "SizeLimit": 512,
-  "FileExpirationDays": 30,
+  //"SizeLimit": 512,
+  "SizeLimit": 1,
+  //"FileExpirationDays": 30,
+  "FileExpirationDays": 4,
   "UseExpiredFiles": true,
   "CaseSensitivity": false,
   "CacheFullPath": "http_cache"

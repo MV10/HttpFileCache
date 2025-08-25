@@ -4,6 +4,7 @@
       "commandName": "Project",
       "commandLineArgs": "list",
       //"commandLineArgs": "fetch https://mcguirev10.com/assets/2024/01-20/bag_dog_corrected.jpg",
+      //"commandLineArgs": "get https://github.com/user-attachments/assets/4623c986-c511-4a30-ad0d-6a12a5259037",
     }
   }
 }

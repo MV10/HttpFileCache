@@ -41,6 +41,9 @@ public static class FileCache
     // Per docs and design, only one of these is used for all operations
     private static readonly HttpClient Downloader = new();
 
+    // Throws if cache is used without init
+    private static bool Initialized = false;
+
     /// <summary>
     /// This must be called before use.
     /// </summary>
@@ -51,6 +54,8 @@ public static class FileCache
         CacheIndexPathname = Path.Combine(Configuration.CacheFullPath, "index.json");
         CacheMaxSize = Configuration.SizeLimit * 1024;
         ReadCacheIndex();
+        foreach (var kvp in Index) kvp.Value.UsageCounter = 0;
+        Initialized = true;
     }
 
     /// <summary>
@@ -59,6 +64,8 @@ public static class FileCache
     /// </summary>
     public static void RequestFile(string sourceUri, int fileHandle = 0, Action<int, CachedFileData> callback = null)
     {
+        if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
+
         var uri = ParseUri(sourceUri);
         if (uri is null)
         {
@@ -73,7 +80,7 @@ public static class FileCache
         long expiredFileSize = 0;
         if (Index.TryGetValue(uri, out var fileData))
         {
-            callback?.Invoke(fileHandle, null);
+            callback?.Invoke(fileHandle, fileData);
 
             // Mark it as in-use
             fileData.UsageCounter++;
@@ -111,13 +118,14 @@ public static class FileCache
     /// </summary>
     public static async Task RequestFileAsync(string sourceUri, int fileHandle = 0, Action<int, CachedFileData> callback = null, Func<int, CachedFileData, Task> callbackAsync = null)
     {
+        if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
         if (callback is not null && callbackAsync is not null) throw new ArgumentException("Only one of callback or callbackAsync may be specified");
 
         var uri = ParseUri(sourceUri);
         if (uri is null)
         {
             callback?.Invoke(fileHandle, null);
-            await callbackAsync?.Invoke(fileHandle, null);
+            await (callbackAsync?.Invoke(fileHandle, null) ?? Task.CompletedTask); // sigh https://stackoverflow.com/a/33592569/152997
             return;
         }
 
@@ -128,8 +136,8 @@ public static class FileCache
         long expiredFileSize = 0;
         if (Index.TryGetValue(uri, out var fileData))
         {
-            callback?.Invoke(fileHandle, null);
-            await callbackAsync?.Invoke(fileHandle, fileData);
+            callback?.Invoke(fileHandle, fileData);
+            await (callbackAsync?.Invoke(fileHandle, fileData) ?? Task.CompletedTask); // sigh https://stackoverflow.com/a/33592569/152997
 
             // Mark it as in-use
             fileData.UsageCounter++;
@@ -166,6 +174,8 @@ public static class FileCache
     /// </summary>
     public static void ReleaseFile(string sourceUri)
     {
+        if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
+
         var uri = ParseUri(sourceUri);
         if (uri is null) return;
 
@@ -186,6 +196,8 @@ public static class FileCache
     /// </summary>
     public static void DeleteFile(string sourceUri)
     {
+        if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
+
         var uri = ParseUri(sourceUri);
         if(Index.TryGetValue(uri, out var file))
         {
@@ -200,7 +212,9 @@ public static class FileCache
     /// </summary>
     public static void ClearCache()
     {
-        foreach(var kvp in Index)
+        if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
+
+        foreach (var kvp in Index)
         {
             File.Delete(kvp.Value.GetCachePathname());
         }
@@ -213,6 +227,8 @@ public static class FileCache
     /// </summary>
     public static string ParseUri(string sourceUri)
     {
+        if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
+
         if (string.IsNullOrWhiteSpace(sourceUri)) throw new ArgumentNullException(nameof(sourceUri));
 
         var uri = (Configuration.CaseSensitivity) ? sourceUri : sourceUri.ToLowerInvariant();
@@ -285,7 +301,7 @@ public static class FileCache
                     CacheSpaceUsed += request.Data.Size;
                 }
 
-                PruneCache();
+                PruneCache(request.Data.OriginURI);
                 WriteCacheIndex();
             }
             else
@@ -359,7 +375,7 @@ public static class FileCache
                     CacheSpaceUsed += request.Data.Size;
                 }
 
-                PruneCache();
+                PruneCache(request.Data.OriginURI);
                 WriteCacheIndex();
             }
             else
@@ -389,13 +405,15 @@ public static class FileCache
     }
 
     /// <summary>
-    /// Removes old content from the cache.
+    /// Removes old content from the cache. If protectedUri is provided,
+    /// it will not be excluded (typically this is the file that was just
+    /// downloaded that triggered the purge).
     /// </summary>
-    private static void PruneCache()
+    private static void PruneCache(string protectedUri = null)
     {
         if (CacheSpaceUsed < CacheMaxSize) return;
         var files = Index
-                    .Where(kvp => kvp.Value.UsageCounter == 0)
+                    .Where(kvp => kvp.Value.UsageCounter == 0 && !kvp.Value.OriginURI.Equals(protectedUri) )
                     .OrderBy(kvp => kvp.Value.RetrievalTimestamp)
                     .Select(kvp => kvp.Value)
                     .ToList();

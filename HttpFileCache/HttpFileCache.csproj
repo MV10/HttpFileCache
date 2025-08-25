@@ -4,6 +4,22 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
+    <Title>HttpFileCache</Title>
+	<Description>.NET library for simple file cache management and downloading</Description>
+	<PackageProjectUrl>https://github.com/MV10/HttpFileCache</PackageProjectUrl>
+	<PackageIcon></PackageIcon>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
+	<RepositoryUrl>https://github.com/MV10/HttpFileCache</RepositoryUrl>
+	<RepositoryType>git</RepositoryType>
+	<PackageTags>.NET;cache;caching;file cache;file caching;http cache</PackageTags>
+	<PackageLicenseFile>LICENSE</PackageLicenseFile>
+	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	<PackageId>HttpFileCache</PackageId>
+	<Version>0.1.0</Version>
+	<Authors>Jon McGuire</Authors>
+	<Product>HttpFileCache</Product>
+	<Company>Mindmagma</Company>
+	<GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,4 +27,15 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\LICENSE.">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+	  <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+	
 </Project>
