@@ -28,7 +28,7 @@ FileCache.Configuration = new
 	FileExpirationDays = 30,		// files will be refreshed after this
 	UseExpiredFiles = true,    		// temporary access to expired files
 	CaseSensitivity = false,		// false is safer if you don't need it
-	Logger = null,					// a Microsoft.Extensions.Logging logger
+	LoggerFactory = null,			// a Microsoft.Extensions.Logging factory
 };
 
 // Call this after setting config, but before using anything else.

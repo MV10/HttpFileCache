@@ -56,6 +56,8 @@ public static class FileCache
         ReadCacheIndex();
         foreach (var kvp in Index) kvp.Value.UsageCounter = 0;
         Initialized = true;
+
+        Configuration.Logger?.LogTrace($"Constructor completed");
     }
 
     /// <summary>
@@ -65,6 +67,8 @@ public static class FileCache
     public static void RequestFile(string sourceUri, int fileHandle = 0, Action<int, CachedFileData> callback = null)
     {
         if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
+
+        Configuration.Logger?.LogDebug($"{nameof(RequestFile)} URI {sourceUri}");
 
         var uri = ParseUri(sourceUri);
         if (uri is null)
@@ -80,6 +84,7 @@ public static class FileCache
         long expiredFileSize = 0;
         if (Index.TryGetValue(uri, out var fileData))
         {
+            Configuration.Logger?.LogDebug($"{nameof(RequestFile)} found in cache as {uri} @ {fileData.RetrievalTimestamp}");
             callback?.Invoke(fileHandle, fileData);
 
             // Mark it as in-use
@@ -121,6 +126,8 @@ public static class FileCache
         if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
         if (callback is not null && callbackAsync is not null) throw new ArgumentException("Only one of callback or callbackAsync may be specified");
 
+        Configuration.Logger?.LogDebug($"{nameof(RequestFileAsync)} URI {sourceUri}");
+
         var uri = ParseUri(sourceUri);
         if (uri is null)
         {
@@ -136,6 +143,7 @@ public static class FileCache
         long expiredFileSize = 0;
         if (Index.TryGetValue(uri, out var fileData))
         {
+            Configuration.Logger?.LogDebug($"{nameof(RequestFileAsync)} found in cache as {uri} @ {fileData.RetrievalTimestamp}");
             callback?.Invoke(fileHandle, fileData);
             await (callbackAsync?.Invoke(fileHandle, fileData) ?? Task.CompletedTask); // sigh https://stackoverflow.com/a/33592569/152997
 
@@ -176,6 +184,8 @@ public static class FileCache
     {
         if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
 
+        Configuration.Logger?.LogDebug($"{nameof(ReleaseFile)} URI {sourceUri}");
+
         var uri = ParseUri(sourceUri);
         if (uri is null) return;
 
@@ -198,6 +208,8 @@ public static class FileCache
     {
         if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
 
+        Configuration.Logger?.LogDebug($"{nameof(DeleteFile)} URI {sourceUri}");
+
         var uri = ParseUri(sourceUri);
         if(Index.TryGetValue(uri, out var file))
         {
@@ -214,6 +226,8 @@ public static class FileCache
     {
         if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
 
+        Configuration.Logger?.LogDebug(nameof(ClearCache));
+
         foreach (var kvp in Index)
         {
             File.Delete(kvp.Value.GetCachePathname());
@@ -229,6 +243,8 @@ public static class FileCache
     {
         if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
 
+        Configuration.Logger?.LogDebug($"{nameof(ParseUri)} URI {sourceUri}");
+
         if (string.IsNullOrWhiteSpace(sourceUri)) throw new ArgumentNullException(nameof(sourceUri));
 
         var uri = (Configuration.CaseSensitivity) ? sourceUri : sourceUri.ToLowerInvariant();
@@ -239,7 +255,7 @@ public static class FileCache
         }
         catch (Exception ex)
         {
-            Configuration.Logger?.LogError($"{nameof(FileCache)} unable to parse URI {sourceUri}\n{ex.Message}");
+            Configuration.Logger?.LogError($"Unable to parse URI {sourceUri}\n{ex.Message}");
             return null;
         }
         return parsedUri.AbsoluteUri;
@@ -251,6 +267,8 @@ public static class FileCache
     /// </summary>
     public static void Dispose()
     {
+        Configuration.Logger?.LogDebug(nameof(Dispose));
+
         foreach (var kvp in QueuedURIs)
         {
             kvp.Value.CTS.Cancel();
@@ -264,6 +282,8 @@ public static class FileCache
     private static void DownloadFile(CachedFileRequest request)
     {
         bool downloadFailed = false;
+
+        Configuration.Logger?.LogDebug($"{nameof(DownloadFile)} URI {request.Data.OriginURI}");
 
         try
         {
@@ -301,22 +321,26 @@ public static class FileCache
                     CacheSpaceUsed += request.Data.Size;
                 }
 
+                Configuration.Logger?.LogDebug($"{nameof(DownloadFile)} completed URI {request.Data.OriginURI}");
                 PruneCache(request.Data.OriginURI);
                 WriteCacheIndex();
             }
             else
             {
+                Configuration.Logger?.LogError($"{nameof(DownloadFile)} download failed, HTTP status {response.StatusCode} {response.ReasonPhrase}");
                 downloadFailed = true;
             }
 
         }
         catch (OperationCanceledException)
         {
+            Configuration.Logger?.LogError($"{nameof(DownloadFile)} download failed, cancellation token triggered");
             downloadFailed = true;
             request.Callback?.Invoke(request.FileHandle, null);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Configuration.Logger?.LogError($"{nameof(DownloadFile)} download failed, {ex.GetType()}: {ex.Message}");
             downloadFailed = true;
             request.Callback?.Invoke(request.FileHandle, null);
         }
@@ -338,6 +362,8 @@ public static class FileCache
     private static async Task DownloadFileAsync(CachedFileRequest request)
     {
         bool downloadFailed = false;
+
+        Configuration.Logger?.LogDebug($"{nameof(DownloadFileAsync)} URI {request.Data.OriginURI}");
 
         try
         {
@@ -375,21 +401,25 @@ public static class FileCache
                     CacheSpaceUsed += request.Data.Size;
                 }
 
+                Configuration.Logger?.LogDebug($"{nameof(DownloadFileAsync)} completed URI {request.Data.OriginURI}");
                 PruneCache(request.Data.OriginURI);
                 WriteCacheIndex();
             }
             else
             {
+                Configuration.Logger?.LogError($"{nameof(DownloadFileAsync)} download failed, HTTP status {response.StatusCode} {response.ReasonPhrase}");
                 downloadFailed = true;
             }
         }
         catch (OperationCanceledException)
         {
+            Configuration.Logger?.LogError($"{nameof(DownloadFileAsync)} download failed, cancellation token triggered");
             downloadFailed = true;
             request.Callback?.Invoke(request.FileHandle, null);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Configuration.Logger?.LogError($"{nameof(DownloadFileAsync)} download failed, {ex.GetType()}: {ex.Message}");
             downloadFailed = true;
             request.Callback?.Invoke(request.FileHandle, null);
         }
@@ -412,6 +442,9 @@ public static class FileCache
     private static void PruneCache(string protectedUri = null)
     {
         if (CacheSpaceUsed < CacheMaxSize) return;
+
+        Configuration.Logger?.LogDebug(nameof(PruneCache));
+
         var files = Index
                     .Where(kvp => kvp.Value.UsageCounter == 0 && !kvp.Value.OriginURI.Equals(protectedUri) )
                     .OrderBy(kvp => kvp.Value.RetrievalTimestamp)
@@ -436,6 +469,7 @@ public static class FileCache
     private static void ReadCacheIndex()
     {
         if (!File.Exists(CacheIndexPathname)) return;
+        Configuration.Logger?.LogDebug(nameof(ReadCacheIndex));
         var json = File.ReadAllText(CacheIndexPathname);
         Index = JsonConvert.DeserializeObject<Dictionary<string, CachedFileData>>(json);
         CacheSpaceUsed = Index.Sum(kvp => kvp.Value.Size);
@@ -446,6 +480,7 @@ public static class FileCache
     /// </summary>
     private static void WriteCacheIndex()
     {
+        Configuration.Logger?.LogDebug(nameof(WriteCacheIndex));
         string json = JsonConvert.SerializeObject(Index, Formatting.Indented);
         File.WriteAllText(CacheIndexPathname, json);
         CacheSpaceUsed = Index.Sum(kvp => kvp.Value.Size);

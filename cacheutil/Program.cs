@@ -1,6 +1,6 @@
 ﻿
 using HttpFileCache;
-using Microsoft.VisualBasic.FileIO;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace cacheutil;
@@ -29,7 +29,14 @@ internal class Program
         }
         Console.WriteLine("Remember: The utility's configuration may not match the cache owner's config.\n");
 
-        // TODO set a console logger
+        // Send log output to the console.
+        using var loggerFactory = LoggerFactory.Create(config =>
+        {
+            config
+            .AddSimpleConsole(options => options.SingleLine = true)
+            .SetMinimumLevel(LogLevel.Warning);
+        });
+        FileCache.Configuration.LoggerFactory = loggerFactory;
 
         FileCache.Initialize();
         Console.WriteLine($"Cache directory:\n{FileCache.Configuration.CacheFullPath}\n");

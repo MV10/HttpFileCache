@@ -48,13 +48,31 @@ public class FileCacheConfiguration
     public bool CaseSensitivity { get; set; } = false;
 
     /// <summary>
-    /// An optional log sink.
+    /// An optional log factory.
     /// </summary>
     [JsonIgnore]
-    public ILogger Logger { get; set; } = null;
+    public ILoggerFactory LoggerFactory 
+	{ 
+		get; 
+		set
+		{
+			if(value is null)
+			{
+				Logger = null;
+			}
+			else
+			{
+				Logger = value.CreateLogger("HttpFileCache");
+			}
+			field = value;
+		}
+	} = null;
 
 	/// <summary>
 	/// Returns a pathname which combines CacheLocation and CacheDirectory.
 	/// </summary>
 	public string CacheFullPath { get => Path.Combine(CacheLocation, CacheDirectory); }
+
+	[JsonIgnore]
+	internal ILogger Logger = null;
 }

@@ -20,6 +20,7 @@
 	<Product>HttpFileCache</Product>
 	<Company>Mindmagma</Company>
 	<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	<LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
