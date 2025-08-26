@@ -193,7 +193,7 @@ public static class FileCache
     /// <summary>
     /// Returns the full pathname of a cached file, if present.
     /// </summary>
-    public static string GetPathanmeIfCached(string sourceUri)
+    public static string GetPathnameIfCached(string sourceUri)
         => GetDataIfCached(sourceUri)?.GetCachePathname();
 
     /// <summary>
@@ -312,15 +312,21 @@ public static class FileCache
             var response = Downloader.Send(requestMessage, request.CTS.Token);
             if (response.IsSuccessStatusCode)
             {
-                using var stream = response.Content.ReadAsStream();
-                using var fileStream = new FileStream(request.Data.GetCachePathname(), FileMode.Create, FileAccess.Write);
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                // use the old-style block using statements to ensure disposal occurs
+                // and the file is closed before invoking the callback.
+                using (var stream = response.Content.ReadAsStream())
                 {
-                    request.CTS.Token.ThrowIfCancellationRequested();
-                    fileStream.Write(buffer, 0, bytesRead);
-                    request.Data.Size += bytesRead;
+                    using (var fileStream = new FileStream(request.Data.GetCachePathname(), FileMode.Create, FileAccess.Write))
+                    {
+                        byte[] buffer = new byte[8192];
+                        int bytesRead;
+                        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            request.CTS.Token.ThrowIfCancellationRequested();
+                            fileStream.Write(buffer, 0, bytesRead);
+                            request.Data.Size += bytesRead;
+                        }
+                    }
                 }
 
                 request.Data.RetrievalTimestamp = DateTime.Now;
@@ -392,15 +398,21 @@ public static class FileCache
             var response = await Downloader.SendAsync(requestMessage, request.CTS.Token).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                await using var fileStream = new FileStream(request.Data.GetCachePathname(), FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, request.CTS.Token).ConfigureAwait(false)) > 0)
+                // use the old-style block using statements to ensure disposal occurs
+                // and the file is closed before invoking the callback.
+                await using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 {
-                    request.CTS.Token.ThrowIfCancellationRequested();
-                    await fileStream.WriteAsync(buffer, 0, bytesRead, request.CTS.Token).ConfigureAwait(false);
-                    request.Data.Size += bytesRead;
+                    await using (var fileStream = new FileStream(request.Data.GetCachePathname(), FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
+                    {
+                        byte[] buffer = new byte[8192];
+                        int bytesRead;
+                        while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, request.CTS.Token).ConfigureAwait(false)) > 0)
+                        {
+                            request.CTS.Token.ThrowIfCancellationRequested();
+                            await fileStream.WriteAsync(buffer, 0, bytesRead, request.CTS.Token).ConfigureAwait(false);
+                            request.Data.Size += bytesRead;
+                        }
+                    }
                 }
 
                 request.Data.RetrievalTimestamp = DateTime.Now;
