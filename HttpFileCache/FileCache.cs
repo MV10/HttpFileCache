@@ -178,6 +178,25 @@ public static class FileCache
     }
 
     /// <summary>
+    /// Returns the index data for a cached file, if present.
+    /// </summary>
+    public static CachedFileData GetDataIfCached(string sourceUri)
+    {
+        if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
+        var uri = ParseUri(sourceUri);
+        if (uri is null) return null;
+        CachedFileData file = null;
+        Index.TryGetValue(uri, out file);
+        return file;
+    }
+
+    /// <summary>
+    /// Returns the full pathname of a cached file, if present.
+    /// </summary>
+    public static string GetPathanmeIfCached(string sourceUri)
+        => GetDataIfCached(sourceUri)?.GetCachePathname();
+
+    /// <summary>
     /// File consumers should call this when disposing resources.
     /// </summary>
     public static void ReleaseFile(string sourceUri)
