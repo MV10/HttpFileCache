@@ -332,8 +332,6 @@ public static class FileCache
                 request.Data.RetrievalTimestamp = DateTime.Now;
                 request.Data.ContentType = response.Content.Headers.ContentType?.ToString();
 
-                request.Callback?.Invoke(request.FileHandle, request.Data);
-
                 if (request.ReplacingExpiredFile)
                 {
                     File.Delete(Index[request.Data.OriginURI].GetCachePathname());
@@ -346,9 +344,11 @@ public static class FileCache
                     CacheSpaceUsed += request.Data.Size;
                 }
 
-                Configuration.Logger?.LogDebug($"{nameof(DownloadFile)} completed URI {request.Data.OriginURI}");
                 PruneCache(request.Data.OriginURI);
                 WriteCacheIndex();
+
+                Configuration.Logger?.LogDebug($"{nameof(DownloadFile)} completed URI {request.Data.OriginURI}");
+                request.Callback?.Invoke(request.FileHandle, request.Data);
             }
             else
             {
@@ -418,8 +418,6 @@ public static class FileCache
                 request.Data.RetrievalTimestamp = DateTime.Now;
                 request.Data.ContentType = response.Content.Headers.ContentType?.ToString();
 
-                request.Callback?.Invoke(request.FileHandle, request.Data);
-
                 if (request.ReplacingExpiredFile)
                 {
                     File.Delete(Index[request.Data.OriginURI].GetCachePathname());
@@ -432,9 +430,11 @@ public static class FileCache
                     CacheSpaceUsed += request.Data.Size;
                 }
 
-                Configuration.Logger?.LogDebug($"{nameof(DownloadFileAsync)} completed URI {request.Data.OriginURI}");
                 PruneCache(request.Data.OriginURI);
                 WriteCacheIndex();
+
+                Configuration.Logger?.LogDebug($"{nameof(DownloadFileAsync)} completed URI {request.Data.OriginURI}");
+                request.Callback?.Invoke(request.FileHandle, request.Data);
             }
             else
             {
