@@ -79,6 +79,8 @@ public async Task DownloadCallbackAsync(int fileID, CachedFileData fileData)
 
 Download operations proceed on a background thread (synchronous or async, and you can await the aysnc operations if you wish). When a download is completed, the downloader will invoke a callback in the client application. If the download operation fails or is canceled, the callback will be invoked with a null `CachedFileData` argument.
 
+Alternately, the program can first call either `GetDataIfCached` or `GetPathnameIfCached` to attempt to retrieve an alread-cached file without starting a download. If the file is not present, these methods will return null.
+
 ### Accessing a File
 
 To access the cached file, read the complete pathname from the `GetCachePathname()` method on the `CachedFileData` object returned to your application's callback method.

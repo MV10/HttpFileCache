@@ -178,6 +178,30 @@ public static class FileCache
     }
 
     /// <summary>
+    /// Returns the index data for a cached file, if present.
+    /// </summary>
+    public static CachedFileData GetDataIfCached(string sourceUri, bool incrementUsageCount = false)
+    {
+        if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
+        var uri = ParseUri(sourceUri);
+        if (uri is null) return null;
+        CachedFileData file = null;
+        Index.TryGetValue(uri, out file);
+        if(file is not null && incrementUsageCount)
+        {
+            file.UsageCounter++;
+            WriteCacheIndex();
+        }
+        return file;
+    }
+
+    /// <summary>
+    /// Returns the full pathname of a cached file, if present.
+    /// </summary>
+    public static string GetPathnameIfCached(string sourceUri, bool incrementUsageCount = false)
+        => GetDataIfCached(sourceUri)?.GetCachePathname();
+
+    /// <summary>
     /// File consumers should call this when disposing resources.
     /// </summary>
     public static void ReleaseFile(string sourceUri)
@@ -293,21 +317,25 @@ public static class FileCache
             var response = Downloader.Send(requestMessage, request.CTS.Token);
             if (response.IsSuccessStatusCode)
             {
-                using var stream = response.Content.ReadAsStream();
-                using var fileStream = new FileStream(request.Data.GetCachePathname(), FileMode.Create, FileAccess.Write);
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                // use the old-style block using statements to ensure disposal occurs
+                // and the file is closed before invoking the callback.
+                using (var stream = response.Content.ReadAsStream())
                 {
-                    request.CTS.Token.ThrowIfCancellationRequested();
-                    fileStream.Write(buffer, 0, bytesRead);
-                    request.Data.Size += bytesRead;
+                    using (var fileStream = new FileStream(request.Data.GetCachePathname(), FileMode.Create, FileAccess.Write))
+                    {
+                        byte[] buffer = new byte[8192];
+                        int bytesRead;
+                        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            request.CTS.Token.ThrowIfCancellationRequested();
+                            fileStream.Write(buffer, 0, bytesRead);
+                            request.Data.Size += bytesRead;
+                        }
+                    }
                 }
 
                 request.Data.RetrievalTimestamp = DateTime.Now;
                 request.Data.ContentType = response.Content.Headers.ContentType?.ToString();
-
-                request.Callback?.Invoke(request.FileHandle, request.Data);
 
                 if (request.ReplacingExpiredFile)
                 {
@@ -321,9 +349,11 @@ public static class FileCache
                     CacheSpaceUsed += request.Data.Size;
                 }
 
-                Configuration.Logger?.LogDebug($"{nameof(DownloadFile)} completed URI {request.Data.OriginURI}");
                 PruneCache(request.Data.OriginURI);
                 WriteCacheIndex();
+
+                Configuration.Logger?.LogDebug($"{nameof(DownloadFile)} completed URI {request.Data.OriginURI}");
+                request.Callback?.Invoke(request.FileHandle, request.Data);
             }
             else
             {
@@ -373,21 +403,25 @@ public static class FileCache
             var response = await Downloader.SendAsync(requestMessage, request.CTS.Token).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                await using var fileStream = new FileStream(request.Data.GetCachePathname(), FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, request.CTS.Token).ConfigureAwait(false)) > 0)
+                // use the old-style block using statements to ensure disposal occurs
+                // and the file is closed before invoking the callback.
+                await using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 {
-                    request.CTS.Token.ThrowIfCancellationRequested();
-                    await fileStream.WriteAsync(buffer, 0, bytesRead, request.CTS.Token).ConfigureAwait(false);
-                    request.Data.Size += bytesRead;
+                    await using (var fileStream = new FileStream(request.Data.GetCachePathname(), FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
+                    {
+                        byte[] buffer = new byte[8192];
+                        int bytesRead;
+                        while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, request.CTS.Token).ConfigureAwait(false)) > 0)
+                        {
+                            request.CTS.Token.ThrowIfCancellationRequested();
+                            await fileStream.WriteAsync(buffer, 0, bytesRead, request.CTS.Token).ConfigureAwait(false);
+                            request.Data.Size += bytesRead;
+                        }
+                    }
                 }
 
                 request.Data.RetrievalTimestamp = DateTime.Now;
                 request.Data.ContentType = response.Content.Headers.ContentType?.ToString();
-
-                request.Callback?.Invoke(request.FileHandle, request.Data);
 
                 if (request.ReplacingExpiredFile)
                 {
@@ -401,9 +435,11 @@ public static class FileCache
                     CacheSpaceUsed += request.Data.Size;
                 }
 
-                Configuration.Logger?.LogDebug($"{nameof(DownloadFileAsync)} completed URI {request.Data.OriginURI}");
                 PruneCache(request.Data.OriginURI);
                 WriteCacheIndex();
+
+                Configuration.Logger?.LogDebug($"{nameof(DownloadFileAsync)} completed URI {request.Data.OriginURI}");
+                request.Callback?.Invoke(request.FileHandle, request.Data);
             }
             else
             {

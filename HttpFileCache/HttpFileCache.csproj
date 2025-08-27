@@ -15,7 +15,7 @@
 	<PackageLicenseFile>LICENSE</PackageLicenseFile>
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	<PackageId>HttpFileCache</PackageId>
-	<Version>0.1.1</Version>
+	<Version>0.1.2</Version>
 	<Authors>Jon McGuire</Authors>
 	<Product>HttpFileCache</Product>
 	<Company>Mindmagma</Company>
