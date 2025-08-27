@@ -1,12 +1,12 @@
 # HttpFileCache [![NuGet](https://img.shields.io/nuget/v/HttpFileCache.svg)](https://nuget.org/packages/HttpFileCache)
 
+> The public 0.1.1 version has been deprecated. The repo is 0.1.2, but I do not currently intend to modify this further. It works, but I wasn't happy with the reference-counting overhead, and as features go it just wasn't that important to the app for which it was intended.
+
 This .NET library supports simple HTTP file retrieval and caching. It was created to support image and video downloads for my [Monkey Hi Hat](https://github.com/MV10/monkey-hi-hat) music visualizer, but the functionality seems generally useful so I decided to share the code as a library package instead.
 
 You can configure the storage location (or use the default, which is the user's local temp directory), maximum storage size in megabytes, and the maximum file age in days, after which the given URI will be refreshed when requested. A small command-line utility is included for manual cache inspection and management.
 
 Because this was created for internal use by a project I fully controlled, there are certain safety features I didn't bother to implement. For example, you _could_ change the configuration object once the cache is in use, and you'd probably break things. The rule of thumb is, don't do stupid things, and stupid things won't happen. If you need something but it seems like it might have negative repercussions, just open an Issue and ask me about it.
-
-> Normally I don't do the "pre-release" thing with my packages, but the sheer variability of usage patterns and data with caching means I'm not comfortable declaring this one-dot-zero ready-for-primetime just yet.
 
 # Usage
 
