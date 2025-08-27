@@ -85,6 +85,8 @@ Alternately, the program can first call either `GetDataIfCached` or `GetPathname
 
 To access the cached file, read the complete pathname from the `GetCachePathname()` method on the `CachedFileData` object returned to your application's callback method.
 
+You can also invoke `GetDataIfCached` or `GetPathnameIfCached`, both with an optional flag to increment the reference-counter.
+
 ### Interrupting a Download
 
 If the application no longer needs a file that is still being downloaded, invoke the `ReleaseFile` method.
