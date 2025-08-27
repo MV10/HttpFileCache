@@ -180,20 +180,25 @@ public static class FileCache
     /// <summary>
     /// Returns the index data for a cached file, if present.
     /// </summary>
-    public static CachedFileData GetDataIfCached(string sourceUri)
+    public static CachedFileData GetDataIfCached(string sourceUri, bool incrementUsageCount = false)
     {
         if (!Initialized) throw new InvalidOperationException("Invoke FileCache.Initialize before use");
         var uri = ParseUri(sourceUri);
         if (uri is null) return null;
         CachedFileData file = null;
         Index.TryGetValue(uri, out file);
+        if(file is not null && incrementUsageCount)
+        {
+            file.UsageCounter++;
+            WriteCacheIndex();
+        }
         return file;
     }
 
     /// <summary>
     /// Returns the full pathname of a cached file, if present.
     /// </summary>
-    public static string GetPathnameIfCached(string sourceUri)
+    public static string GetPathnameIfCached(string sourceUri, bool incrementUsageCount = false)
         => GetDataIfCached(sourceUri)?.GetCachePathname();
 
     /// <summary>
